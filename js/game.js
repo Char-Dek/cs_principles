@@ -1,30 +1,23 @@
 // global variables
-
 let canvas;
 let ctx;
+let WIDTH = 600;
+let HEIGHT = 400;
 
+// here we use init (short for initialize) to setup the canvas and context
+// this function will be called in the HTML document in body onload = ""
+// we also append the body with a new canvas element
 function init() {
-    // creates a variable called canvas that holds the HTML document element <canvas></canvas>
-    // the canvas allows us to draw things on the HTML document page
-    // check out the MDN reference here for more info https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API
-    // method - function for an object 
     canvas = document.createElement("canvas");
-    // the CanvasRenderingContext2D interface, part of the Canvas API, allows us to draw
-    // You can use it to create shapes, text, images, and other objects.
-    // here we assign the context to ctx, which is a shorthand way of accessing commands
+    canvas.width = WIDTH;
+    canvas.height = HEIGHT;
     ctx = canvas.getContext('2d');
-    // smart to do just so you know
-    console.log("game initialized"); 
-    // Here we append the body of the HTML document, which adds the canvas to the document body
+    console.log("game initialized");
     document.body.appendChild(canvas);
     gameLoop();
 }
 
 
-function draw() {
-    oneSquare.draw();
-    twoSquare.draw();
-}
 
 // here we have a big leap!
 // We are using the window.requestAnimationFrame() 
@@ -33,27 +26,58 @@ function draw() {
 // It asks the browser to call a specific function, in our case gameLoop
 // It uses this function to 'repaint'
 // In JS this called a callback, where a function passes an argument to another function
-let Square = function (x, y, w, h) {
-    this.x = x;
-    this.y = y;
-    this.w = w;
-    this.h = h;
-    // this.update = function () {
-    //     this.x += 5;
-    // }
-    this.draw = function () {
-        ctx.fillStyle = 'rgb(200, 0, 0)';
-        ctx.fillRect(this.x, this.y, this.w, this.h);
-    };
-}
+class Square {
+    constructor(id, x, y, w, h, color) {
+        this.id = id;
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+        this.color = color;
+        this.speed = 3;
+        }
+        update(){
+            // WIDTH-this.w - then itll bounce when right side hits not left side
+            if (this.x >= WIDTH-this.w ||this.x < 0){
+                console.log("bonk");
+                this.speed =-this.speed;
+
+            }
+            this.x += this.speed;
+        };
+        draw(){
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.w, this.h);
+        };
+    }
 
 // instantiations...
-let oneSquare = new Square(10, 10, 50, 50);
-let twoSquare = new Square(60, 60, 50, 50);
+let oneSquare = new Square("Bob", 10, 10, 50, 50, 'rgb(200, 100, 200)');
+let twoSquare = new Square("Chuck", 60, 60, 100, 100, 'rgb(200, 200, 0)');
 
-let gameLoop = function(){
-    // update();
-    // console.log("the game loop is alive now comment this out before it eats up memory")
+let someArray = [oneSquare, twoSquare];
+for (i in someArray){
+    console.log(someArray[i]);
+}
+for (i of someArray){
+    console.log(i);
+}
+
+
+function update(){
+    oneSquare.update();
+}
+// we now have just the drawing commands in the function draw
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    oneSquare.draw();
+    twoSquare.draw();
+}
+
+// MDN reference https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame
+let gameLoop = function () {
+    // console.log('the game loop is alive! now comment this out before it eats up memory...')
+    update();
     draw();
     window.requestAnimationFrame(gameLoop);
 }
