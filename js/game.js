@@ -1,15 +1,18 @@
 // global variables
 let canvas;
 let ctx;
-let WIDTH = 600;
-let HEIGHT = 400;
-let TILESIZE = 32;
+let WIDTH = 1408;
+let HEIGHT = 576;
+let TILESIZE = 64;
+let allSprites = [];
+let walls = [];
+
+
 
 // get user input from keyboard
 let keysDown = {};
 let keysUp = {};
 
-// our array of like what we want the window to look like
 let gamePlan = `
 ......................
 ..#................#..
@@ -21,18 +24,16 @@ let gamePlan = `
 ......##############..
 ......................`;
 
-// like when a key is pressed do something and when it is picked up stop doing that thing
+
+
 addEventListener("keydown", function (event) {
     keysDown[event.key] = true;
-    console.log("key down is " + keysDown[event.key]);
-    console.log(keysDown);
+    // console.log("key down is " + keysDown[event.key]);
 }, false);
 
 addEventListener("keyup", function (event) {
     // keysUp[event.key] = true;
     delete keysDown[event.key];
-    console.log(keysDown);
-    console.log(keysUp);
 }, false);
 
 // here we use init (short for initialize) to setup the canvas and context
@@ -47,40 +48,32 @@ function init() {
     document.body.appendChild(canvas);
     gameLoop();
 }
-// class with properties that we can tickle with
-class Square {
-    constructor(id, x, y, speed, w, h, color) {
-        this.id = id;
+
+class Sprite {
+    constructor(x, y, w, h, color) {
         this.x = x;
         this.y = y;
-        this.speed = speed;
         this.w = w;
         this.h = h;
         this.color = color;
+        allSprites.push(this);
     }
-    // creating itself - ballsy
-    create(id, x, y, speed, w, h, color) {
-        return new Square(id, x, y, speed, w, h, color);
+    get type() {
+        return "sprite";
     }
-    update() {
-        if (this.x >= WIDTH - this.w || this.x < 0) {
-            // console.log("I fell off the side!!!!")
-            this.speed = -this.speed;
-        }
-        this.x += this.speed;
-        // this.y += Math.random()*5*this.speed;
-        // console.log(this.x);
-    };
+    create(x, y, w, h, color) {
+        return new Sprite(x, y, w, h, color);
+    }
     draw() {
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y, this.w, this.h);
     };
 }
-// extension of square - same square properties but also new ones like hitpoints
-class Player extends Square {
-    constructor(id, x, y, speed, w, h, color, hitpoints) {
-        super(id, x, y, speed, w, h, color);
-        this.id = id;
+
+
+class Player extends Sprite {
+    constructor(x, y, speed, w, h, color, hitpoints) {
+        super(x, y, w, h, color);
         this.x = x;
         this.y = y;
         this.speed = speed;
@@ -90,34 +83,110 @@ class Player extends Square {
         this.hitpoints = hitpoints;
         // console.log(this.hitpoints);
     }
-    // moving the character across the x,y plane given wasd
-    update() {
+    collideWith(obj){
+        if (this.x + this.w > obj.x &&
+            this.x < obj.x + obj.w &&
+            this.y + this.h > obj.y &&
+            this.y < obj.y + obj.h
+            ){
+                console.log(this.type + ' collides with ' + obj.type);
+                return true;
+            }
+    }    
+    get type() {
+        return "player";
+    }
+    input() {
         if ('w' in keysDown) {
+            this.dy = -1;
+            // console.log("dy is: " + this.dy)
             this.y -= this.speed;
         }
         if ('a' in keysDown) {
+            this.dx = -1;
+            // console.log("dx is: " + this.dx)
             this.x -= this.speed;
         }
         if ('s' in keysDown) {
+            this.dy = 1
+            // console.log("dy is: " + this.dy)
             this.y += this.speed;
+
         }
         if ('d' in keysDown) {
+            this.dx = 1;
+            // console.log("dx is: " + this.dx)
             this.x += this.speed;
         }
 
+    }
+    update() {
+        this.input();
         // this.y += Math.random()*5*this.speed;
         // console.log(this.x);
+        if (this.x + this.w > WIDTH) {
+            this.x = WIDTH - this.w;
+        
+        }
+        if (this.x <= 0) {
+        this.x = 0;
+        }
+        if (this.y + this.h > HEIGHT) {
+            this.y = HEIGHT - this.h;
+        
+        }
+        if (this.y <= 0) {
+        this.y = 0;
+        }
     };
 }
-// like little cheat sheet translator
+
+class Enemy extends Player{
+    constructor(x, y, speed, w, h, color, hitpoints){
+        super(x, y, speed, w, h, color, hitpoints);
+        this.x = x;
+        this.y = y;
+        this.speed = speed;
+        this.w = w;
+        this.h = h;
+        this.color = color;
+        this.hitpoints = hitpoints;
+        // console.log(this.hitpoints);
+    }
+
+    get type(){
+        return "enemy";
+    }
+
+}
+
+let badguy = new Enemy();
+console.log("here's the example of a sub-sub class " + badguy.type);
+console.log("badguy stats " + badguy.speed);
+
+class Wall extends Sprite{
+    constructor(x, y, w, h, color){
+        super(x, y, w, h, color);
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+        this.color = color;
+    }
+    create(x, y, w, h, color) {
+        return new Wall(x, y, w, h, color);
+    }
+    get type(){
+        return "wall";
+    }
+}
+
+
 const levelChars = {
     ".": "empty",
-    "#": Square,
+    "#": Wall,
 };
-/*
-we make a row array and a grid array, put each like character into the row array and then new line
-then put each newrow into the grid array and we have our little array in the computer that we can tickle with
-*/
+
 function makeGrid(plan, width) {
     let newGrid = [];
     let newRow = [];
@@ -133,13 +202,13 @@ function makeGrid(plan, width) {
     return newGrid;
 }
 
-console.log(makeGrid(gamePlan, 22));
+console.log("here's the grid...\n" + makeGrid(gamePlan, 22));
 
 function readLevel(grid) {
     let startActors = [];
     // note the change from i to x and y
     for (y in grid) {
-        for (x of grid[y]) {
+        for (x in grid[y]) {
             /*              crate a variable based on the current
             item in the two dimensional array being read
              */
@@ -162,14 +231,13 @@ function readLevel(grid) {
                 let type = levelChars[ch];
                 if (typeof type == "string") {
                     startActors.push(type);
-                }
-                else {
+                } else {
                     let t = new type;
                     // let id = Math.floor(100*Math.random());
-                /*  Here we can use the x and y values from reading the grid, 
-                    then adjust them based on the tilesize
-                     */
-                    startActors.push(t.create("square", x * TILESIZE, y * TILESIZE, 3, TILESIZE, TILESIZE, 'red'))
+                    /*  Here we can use the x and y values from reading the grid, 
+                        then adjust them based on the tilesize
+                         */
+                    startActors.push(t.create(x * TILESIZE, y * TILESIZE, TILESIZE, TILESIZE, 'red'))
                 }
             }
         }
@@ -179,22 +247,41 @@ function readLevel(grid) {
 
 
 let currentLevel = readLevel(makeGrid(gamePlan, 22))
+console.log('current level');
 console.log(currentLevel);
 
 // instantiations...
-let player1 = new Player("Me", WIDTH / 2, HEIGHT / 2, 1, 40, 40, 'rgb(100, 100, 100)', 100);
-let oneSquare = new Square("Bob", 10, 10, 1, 50, 50, 'rgb(200, 100, 200)');
-let twoSquare = new Square("Chuck", 60, 60, 5, 100, 100, 'rgb(200, 200, 0)');
-let threeSquare = new Square("Bill", 70, 70, 3, 25, 25, 'rgb(100, 100, 222)');
+let player1 = new Player(WIDTH / 2, HEIGHT / 2, 10, TILESIZE, TILESIZE, 'rgb(100, 100, 100)', 100);
+// let oneSquare = new Square("Bob", 10, 10, 1, 50, 50, 'rgb(200, 100, 200)');
+// let twoSquare = new Square("Chuck", 60, 60, 5, 100, 100, 'rgb(200, 200, 0)');
+// let threeSquare = new Square("Bill", 70, 70, 3, 25, 25, 'rgb(100, 100, 222)');
 
-let allSprites = [oneSquare, twoSquare, threeSquare, player1];
-
+console.log(allSprites);
+console.log(walls);
 
 function update() {
     for (i of allSprites) {
-        // console.log(i);
-        i.update();
+        if (i.type == "wall") {
+            // console.log(i)
+            if (player1.collideWith(i)) {
+                if (player1.dx == 1){
+                    player1.x = i.x - player1.w
+                }
+                else if (player1.dx == -1){
+                    player1.x = i.x +i.w
+                }
+                else if (player1.dx == 1){
+                    player1.y = i.y - player.h
+                }
+                else if (player1.dx == 1){
+                    player1.y = i.y + i.h
+                }
+                // console.log("player collided with walls")
+                console.log("player1 dx is:" + player1.dx);
+            }
+        }
     }
+    player1.update();
 
     // oneSquare.update();
     // twoSquare.update();
